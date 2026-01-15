@@ -1,0 +1,29 @@
+{{- if .Values.migration.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "multiagent-social.fullname" . }}-migrate
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "1"
+spec:
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: migrate
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              if [ -z "$PG_DSN" ]; then
+                echo "PG_DSN not set"
+                exit 1
+              fi
+              echo "running migrations..."
+              psql "$PG_DSN" -f /app/migrations/001_init.sql
+          env:
+{{- if .Values.env }}
+{{ toYaml .Values.env | indent 12 }}
+{{- end }}
+{{- end }}

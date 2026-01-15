@@ -1,0 +1,55 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      - name: Build frontend
+        run: |
+          cd web/react-app
+          npm ci
+          npm run build
+          cd -
+      - name: Build & push image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: ${{ secrets.DOCKER_REGISTRY }}/multiagent-social:${{ github.ref_name }}
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+      - name: Deploy to staging (optional)
+        if: ${{ secrets.KUBE_CONFIG_DATA != '' }}
+        env:
+          KUBECONFIG_CONTENT: ${{ secrets.KUBE_CONFIG_DATA }}
+        run: |
+          echo "$KUBECONFIG_CONTENT" | base64 --decode > kubeconfig
+          export KUBECONFIG=$PWD/kubeconfig
+          echo "Installing helm..."
+          curl https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | bash
+          helm upgrade --install multiagent-staging deployments/k8s -n staging --create-namespace \
+            --set image.repository=${{ secrets.DOCKER_REGISTRY }}/multiagent-social \
+            --set image.tag=${{ github.ref_name }} \
+            --wait --timeout 120s
+          echo "Waiting for deployment rollout (by label)..."
+          kubectl rollout status deployment -l app=multiagent-social -n staging --timeout=120s || true
+          kubectl get pods -n staging
+          rm -f kubeconfig
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

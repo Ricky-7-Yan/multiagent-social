@@ -1,0 +1,38 @@
+replicaCount: 1
+
+image:
+  repository: multiagent-social
+  pullPolicy: IfNotPresent
+  tag: latest
+
+service:
+  type: ClusterIP
+  port: 8080
+
+resources: {}
+
+env: {}
+
+ingress:
+  enabled: false
+  hosts: []
+  tls: false
+  tlsSecret: ""
+
+serviceMonitor:
+  enabled: false
+
+hpa:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 50
+
+ingress:
+  annotations: {}
+  tlsSecret: ""
+
+
+migration:
+  enabled: false
+

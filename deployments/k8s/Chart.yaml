@@ -1,0 +1,7 @@
+apiVersion: v2
+name: multiagent-social
+description: A Helm chart for multiagent-social
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+

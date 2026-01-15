@@ -1,0 +1,17 @@
+{{- if .Values.serviceMonitor.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "multiagent-social.fullname" . }}-sm
+spec:
+  selector:
+    matchLabels:
+      app: {{ include "multiagent-social.name" . }}
+  endpoints:
+    - port: {{ .Values.service.port }}
+      interval: 30s
+      path: /metrics
+  namespaceSelector:
+    any: true
+{{- end }}
+

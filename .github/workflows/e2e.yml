@@ -1,0 +1,30 @@
+name: E2E
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    services:
+      docker:
+        image: docker:20.10.16
+        options: --privileged
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Docker Compose
+        uses: docker/setup-buildx-action@v2
+      - name: Build and run compose
+        run: |
+          docker compose -f deployments/docker/docker-compose.yml up -d --build
+      - name: Wait for services
+        run: sleep 10
+      - name: Run migrations
+        run: |
+          export PG_DSN="postgres://postgres:password@localhost:5432/multiagent?sslmode=disable"
+          psql "$PG_DSN" -f migrations/001_init.sql
+      - name: Run e2e script
+        run: ./scripts/e2e.sh
