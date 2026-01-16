@@ -22,7 +22,7 @@ func GenerateEmbedding(ctx context.Context, text string) (Vector, error) {
 	}
 	client := openai.NewClient(key)
 	resp, err := client.CreateEmbeddings(ctx, openai.EmbeddingRequest{
-		Model: openai.AdaEmbeddingV2, // fallback model; change as needed
+		Model: openai.AdaEmbeddingV2,
 		Input: []string{text},
 	})
 	if err != nil {
@@ -43,25 +43,19 @@ func SaveEmbedding(ctx context.Context, store *persistence.PostgresStore, conver
 	if store == nil {
 		return errors.New("nil store")
 	}
-	// convert to pgvector.Vector
-	pgvec := pgvector.NewVector(len(v))
-	for i := range v {
-		pgvec[i] = float32(v[i])
-	}
+	pgvec := pgvector.NewVector(v)
 	_, err := store.Pool().Exec(ctx, "INSERT INTO embeddings (conversation_id, message_id, vector) VALUES ($1, $2, $3)", conversationID, messageID, pgvec)
 	return err
 }
 
-// QuerySimilarMessages returns up to k message IDs similar to the provided vector using pgvector <-> vector operator.
+// QuerySimilarMessages returns up to k message IDs similar to the provided vector using pgvector distance operator.
 func QuerySimilarMessages(ctx context.Context, store *persistence.PostgresStore, vector Vector, k int) ([]string, error) {
 	if store == nil {
 		return nil, errors.New("nil store")
 	}
-	pgvec := pgvector.NewVector(len(vector))
-	for i := range vector {
-		pgvec[i] = float32(vector[i])
-	}
-	rows, err := store.Pool().Query(ctx, "SELECT message_id FROM embeddings ORDER BY vector <=> $1 LIMIT $2", pgvec, k)
+	pgvec := pgvector.NewVector(vector)
+	// use pgvector '<->' distance operator (lower = more similar)
+	rows, err := store.Pool().Query(ctx, "SELECT message_id FROM embeddings ORDER BY vector <-> $1 LIMIT $2", pgvec, k)
 	if err != nil {
 		return nil, err
 	}
