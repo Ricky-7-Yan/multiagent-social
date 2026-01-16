@@ -8,6 +8,8 @@ on:
 jobs:
   release:
     runs-on: ubuntu-latest
+    env:
+      KUBE_CONFIG_DATA: ${{ secrets.KUBE_CONFIG_DATA }}
     steps:
       - uses: actions/checkout@v4
       - name: Set up Node.js
@@ -30,10 +32,13 @@ jobs:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
       - name: Deploy to staging (optional)
-        if: ${{ secrets.KUBE_CONFIG_DATA != '' }}
         env:
           KUBECONFIG_CONTENT: ${{ secrets.KUBE_CONFIG_DATA }}
         run: |
+          if [ -z "${KUBECONFIG_CONTENT}" ]; then
+            echo "KUBE_CONFIG_DATA not set; skipping deploy."
+            exit 0
+          fi
           echo "$KUBECONFIG_CONTENT" | base64 --decode > kubeconfig
           export KUBECONFIG=$PWD/kubeconfig
           echo "Installing helm..."

@@ -22,6 +22,10 @@ jobs:
           docker compose -f deployments/docker/docker-compose.yml up -d --build
       - name: Wait for services
         run: sleep 10
+      - name: Install Postgres client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
       - name: Run migrations
         run: |
           export PG_DSN="postgres://postgres:password@localhost:5432/multiagent?sslmode=disable"
