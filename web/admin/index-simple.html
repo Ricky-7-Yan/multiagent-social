@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MultiAgent Admin - Simple UI</title>
+    <style>
+      body { font-family: system-ui, Arial; padding: 24px; }
+      button { padding: 8px 12px; margin: 4px; }
+      input, textarea { width: 100%; margin: 6px 0; padding: 8px; }
+      #log { white-space: pre-wrap; background:#f7f7f7; padding:10px; border:1px solid #eee; height:200px; overflow:auto;}
+    </style>
+  </head>
+  <body>
+    <h1>MultiAgent Admin — Simple UI</h1>
+    <section>
+      <h2>Create conversation</h2>
+      <input id="conv-title" placeholder="Conversation title (optional)"/>
+      <button id="btn-create-conv">Create</button>
+      <div id="conv-result"></div>
+    </section>
+
+    <section>
+      <h2>Post message</h2>
+      <input id="conv-id" placeholder="Conversation ID"/>
+      <textarea id="message" rows="3" placeholder="Message content"></textarea>
+      <button id="btn-post-msg">Post message</button>
+    </section>
+
+    <section>
+      <h2>List agents</h2>
+      <button id="btn-list-agents">Refresh agents</button>
+      <ul id="agents"></ul>
+    </section>
+
+    <h2>Log</h2>
+    <div id="log"></div>
+
+    <script>
+      const log = (s)=> { const el=document.getElementById('log'); el.textContent = new Date().toISOString() + ' - ' + s + '\n' + el.textContent; };
+
+      async function createConversation() {
+        const title = document.getElementById('conv-title').value || '';
+        try {
+          const res = await fetch('/api/v1/conversations', { method: 'POST', body: title });
+          if (!res.ok) throw new Error('status '+res.status);
+          const id = await res.text();
+          document.getElementById('conv-result').textContent = 'Created: ' + id;
+          document.getElementById('conv-id').value = id;
+          log('Created conversation ' + id);
+        } catch (e) {
+          log('Create conversation failed: ' + e);
+        }
+      }
+
+      async function postMessage() {
+        const conv = document.getElementById('conv-id').value.trim();
+        const msg = document.getElementById('message').value.trim();
+        if (!conv) { alert('Provide conversation id'); return; }
+        if (!msg) { alert('Provide message'); return; }
+        try {
+          const res = await fetch('/api/v1/conversations/' + encodeURIComponent(conv) + '/messages', { method: 'POST', body: msg });
+          if (!res.ok) throw new Error('status ' + res.status);
+          log('Posted message to ' + conv);
+        } catch (e) {
+          log('Post message failed: ' + e);
+        }
+      }
+
+      async function listAgents() {
+        try {
+          const res = await fetch('/api/v1/agents');
+          if (!res.ok) throw new Error('status '+res.status);
+          const data = await res.json();
+          const ul = document.getElementById('agents');
+          ul.innerHTML = '';
+          data.forEach(a => {
+            const li = document.createElement('li');
+            li.textContent = (a.id || a.ID || a.id) + ' — ' + (a.name || a.Name || a.name);
+            ul.appendChild(li);
+          });
+          log('Listed agents: ' + data.length);
+        } catch (e) {
+          log('List agents failed: ' + e);
+        }
+      }
+
+      document.getElementById('btn-create-conv').addEventListener('click', createConversation);
+      document.getElementById('btn-post-msg').addEventListener('click', postMessage);
+      document.getElementById('btn-list-agents').addEventListener('click', listAgents);
+
+      // initial load
+      listAgents();
+    </script>
+  </body>
+</html>
+
