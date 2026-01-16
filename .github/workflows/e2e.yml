@@ -1,4 +1,4 @@
-name: E2E
+name: E2E (devserver)
 
 on:
   push:
@@ -7,80 +7,29 @@ on:
     branches: ["main"]
 
 jobs:
-  e2e:
+  e2e-devserver:
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: ankane/pgvector:latest
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: password
-          POSTGRES_DB: multiagent
-        options: >-
-          --health-cmd "pg_isready -U postgres"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
-      redis:
-        image: redis:7
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
     steps:
       - uses: actions/checkout@v4
-      - name: Install Postgres client
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: 1.24.11
+      - name: Download Go modules
+        run: go mod download
+      - name: Build devserver binary
+        run: CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o devserver ./cmd/devserver
+      - name: Start devserver (in-memory)
         run: |
-          sudo apt-get update
-          sudo apt-get install -y postgresql-client
-      - name: Wait for services
-        run: |
-          echo "Waiting for Postgres to be ready (up to 6 minutes)..."
-          export PG_DSN="postgres://postgres:password@localhost:5432/multiagent?sslmode=disable"
-          for i in $(seq 1 180); do
-            if pg_isready -h localhost -p 5432 -U postgres >/dev/null 2>&1; then
-              echo "Postgres ready"
+          nohup ./devserver > devserver.log 2>&1 &
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:8080/health >/dev/null 2>&1; then
+              echo "devserver healthy"
               break
             fi
-            echo "Postgres not ready yet, waiting..."
-            sleep 2
+            sleep 1
           done
-          if ! pg_isready -h localhost -p 5432 -U postgres >/dev/null 2>&1; then
-            echo "Postgres did not become ready in time" >&2
-            exit 1
-          fi
-      - name: Run migrations (retry until success)
-        env:
-          PG_DSN: postgres://postgres:password@localhost:5432/multiagent?sslmode=disable
-        run: |
-          set -eux
-          for i in $(seq 1 10); do
-            if psql "$PG_DSN" -f migrations/001_init.sql; then
-              echo "Migrations applied"
-              break
-            fi
-            echo "Migration attempt $i failed, retrying in 5s..."
-            sleep 5
-            if [ $i -eq 10 ]; then
-              echo "Migrations failed after retries" >&2
-              exit 1
-            fi
-          done
-      - name: Run migrations
-        env:
-          PG_DSN: postgres://postgres:password@localhost:5432/multiagent?sslmode=disable
-        run: |
-          psql "$PG_DSN" -f migrations/001_init.sql
-      - name: Build server
-        run: |
-          go mod download
-          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o multiagent ./cmd/server
-      - name: Start server
-        run: |
-          ./multiagent &
-          sleep 2
-      - name: Make e2e script executable
-        run: chmod +x ./scripts/e2e.sh
-      - name: Run e2e script
-        run: ./scripts/e2e.sh
+      - name: Make dev e2e script executable
+        run: chmod +x ./scripts/e2e-dev.sh
+      - name: Run dev e2e script
+        run: ./scripts/e2e-dev.sh
