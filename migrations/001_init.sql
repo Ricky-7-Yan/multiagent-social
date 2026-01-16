@@ -1,5 +1,7 @@
 -- enable uuid generation if not present
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+-- enable pgvector extension for vector column
+CREATE EXTENSION IF NOT EXISTS vector;
 
 CREATE TABLE IF NOT EXISTS agents (
   id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),

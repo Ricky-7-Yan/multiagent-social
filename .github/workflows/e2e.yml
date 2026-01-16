@@ -10,26 +10,50 @@ jobs:
   e2e:
     runs-on: ubuntu-latest
     services:
-      docker:
-        image: docker:20.10.16
-        options: --privileged
+      postgres:
+        image: ankane/pgvector:latest
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: multiagent
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Docker Compose
-        uses: docker/setup-buildx-action@v2
-      - name: Build and run compose
-        run: |
-          docker compose -f deployments/docker/docker-compose.yml up -d --build
-      - name: Wait for services
-        run: sleep 10
       - name: Install Postgres client
         run: |
           sudo apt-get update
           sudo apt-get install -y postgresql-client
-      - name: Run migrations
+      - name: Wait for services
         run: |
-          export PG_DSN="postgres://postgres:password@localhost:5432/multiagent?sslmode=disable"
+          echo "Waiting for Postgres to be ready..."
+          for i in $(seq 1 30); do
+            pg_isready -h localhost -p 5432 -U postgres && break
+            sleep 2
+          done
+      - name: Run migrations
+        env:
+          PG_DSN: postgres://postgres:password@localhost:5432/multiagent?sslmode=disable
+        run: |
           psql "$PG_DSN" -f migrations/001_init.sql
+      - name: Build server
+        run: |
+          go mod download
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o multiagent ./cmd/server
+      - name: Start server
+        run: |
+          ./multiagent &
+          sleep 2
       - name: Make e2e script executable
         run: chmod +x ./scripts/e2e.sh
       - name: Run e2e script
