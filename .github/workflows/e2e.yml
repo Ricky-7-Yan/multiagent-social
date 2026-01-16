@@ -36,9 +36,9 @@ jobs:
           sudo apt-get install -y postgresql-client
       - name: Wait for services
         run: |
-          echo "Waiting for Postgres to be ready (up to 3 minutes)..."
+          echo "Waiting for Postgres to be ready (up to 6 minutes)..."
           export PG_DSN="postgres://postgres:password@localhost:5432/multiagent?sslmode=disable"
-          for i in $(seq 1 90); do
+          for i in $(seq 1 180); do
             if pg_isready -h localhost -p 5432 -U postgres >/dev/null 2>&1; then
               echo "Postgres ready"
               break
@@ -46,11 +46,27 @@ jobs:
             echo "Postgres not ready yet, waiting..."
             sleep 2
           done
-          # final quick check
           if ! pg_isready -h localhost -p 5432 -U postgres >/dev/null 2>&1; then
             echo "Postgres did not become ready in time" >&2
             exit 1
           fi
+      - name: Run migrations (retry until success)
+        env:
+          PG_DSN: postgres://postgres:password@localhost:5432/multiagent?sslmode=disable
+        run: |
+          set -eux
+          for i in $(seq 1 10); do
+            if psql "$PG_DSN" -f migrations/001_init.sql; then
+              echo "Migrations applied"
+              break
+            fi
+            echo "Migration attempt $i failed, retrying in 5s..."
+            sleep 5
+            if [ $i -eq 10 ]; then
+              echo "Migrations failed after retries" >&2
+              exit 1
+            fi
+          done
       - name: Run migrations
         env:
           PG_DSN: postgres://postgres:password@localhost:5432/multiagent?sslmode=disable
