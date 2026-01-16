@@ -29,6 +29,8 @@ jobs:
         run: go test ./...
       - name: Run golangci-lint (action)
         uses: golangci/golangci-lint-action@v4
+        env:
+          GOFLAGS: -mod=vendor
         with:
           version: v1.59.0
           args: run --timeout 5m
