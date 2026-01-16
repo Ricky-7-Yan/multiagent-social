@@ -1,123 +1,14 @@
 <!doctype html>
-<html>
+<html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>MultiAgent Admin (MVP)</title>
-    <style>
-      body { font-family: Arial, Helvetica, sans-serif; padding: 20px; max-width: 800px; }
-      input, button, textarea { padding: 8px; margin: 4px 0; width: 100%; }
-      .row { display: flex; gap: 8px; }
-      .col { flex: 1; }
-      .messages { border: 1px solid #ddd; padding: 8px; min-height: 200px; overflow:auto; }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MultiAgent Admin</title>
+    <script type="module" crossorigin src="/assets/index-DqKBJua6.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-c4MW8N3x.css">
   </head>
   <body>
-    <h1>MultiAgent Admin (MVP)</h1>
-    <section>
-      <h2>Create Agent</h2>
-      <input id="agentName" placeholder="Agent name" />
-      <textarea id="agentPersona" placeholder="Persona (text)"></textarea>
-      <button onclick="createAgent()">Create Agent</button>
-      <div id="createResult"></div>
-    </section>
-
-    <section>
-      <h2>Agents</h2>
-      <button onclick="listAgents()">Refresh list</button>
-      <ul id="agentList"></ul>
-    </section>
-
-    <section>
-      <h2>Conversation Viewer</h2>
-      <div class="row">
-        <input id="convId" placeholder="conversation id" />
-        <button onclick="openWs()">Open WS</button>
-        <button onclick="createConversation()">Create Conversation</button>
-      </div>
-      <div>
-        <h3>Conversations</h3>
-        <button onclick="listConversations()">Refresh conversations</button>
-        <ul id="convList"></ul>
-      </div>
-      <div class="messages" id="messages"></div>
-      <div class="row">
-        <input id="msgInput" placeholder="message" />
-        <button onclick="postMessage()">Send</button>
-      </div>
-    </section>
-
-    <script>
-      async function createConversation() {
-        const res = await fetch('/api/v1/conversations', { method: 'POST' });
-        const id = await res.text();
-        document.getElementById('convId').value = id;
-        alert('created conversation: ' + id);
-        listConversations();
-      }
-      async function createAgent() {
-        const name = document.getElementById('agentName').value;
-        const persona = document.getElementById('agentPersona').value;
-        const res = await fetch('/api/v1/agents', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, persona })
-        });
-        const j = await res.json();
-        document.getElementById('createResult').innerText = JSON.stringify(j);
-        listAgents();
-      }
-      async function listAgents() {
-        const res = await fetch('/api/v1/agents');
-        const j = await res.json();
-        const ul = document.getElementById('agentList');
-        ul.innerHTML = '';
-        j.forEach(a => {
-          const li = document.createElement('li');
-          li.innerText = `${a.id} - ${a.name} - ${a.persona}`;
-          ul.appendChild(li);
-        });
-      }
-      async function listConversations() {
-        const res = await fetch('/api/v1/conversations');
-        const j = await res.json();
-        const ul = document.getElementById('convList');
-        ul.innerHTML = '';
-        j.forEach(c => {
-          const li = document.createElement('li');
-          li.innerHTML = `<b>${c.title || 'untitled'}</b> - <code>${c.id}</code> <button onclick="selectConv('${c.id}')">Select</button>`;
-          ul.appendChild(li);
-        });
-      }
-      function selectConv(id) {
-        document.getElementById('convId').value = id;
-        appendMsg({event: 'info', content: 'selected conversation ' + id});
-      }
-      let ws = null;
-      function appendMsg(m) {
-        const d = document.createElement('div');
-        d.innerText = JSON.stringify(m);
-        document.getElementById('messages').appendChild(d);
-      }
-      function openWs() {
-        const conv = document.getElementById('convId').value;
-        if (!conv) return alert('missing id');
-        if (ws) ws.close();
-        ws = new WebSocket(`ws://${location.host}/ws/conversations/${conv}`);
-        ws.onmessage = (ev) => {
-          try {
-            const j = JSON.parse(ev.data);
-            appendMsg(j);
-          } catch (e) {
-            appendMsg({ raw: ev.data });
-          }
-        };
-      }
-      async function postMessage() {
-        const conv = document.getElementById('convId').value;
-        const msg = document.getElementById('msgInput').value;
-        await fetch(`/api/v1/conversations/${conv}/messages`, { method: 'POST', body: msg });
-      }
-    </script>
+    <div id="root"></div>
   </body>
 </html>
 
