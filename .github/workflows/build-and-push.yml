@@ -43,6 +43,7 @@ jobs:
         run: go mod download
       - name: Run linter
         run: |
+          export GOFLAGS=-mod=mod
           golangci-lint run ./...
       - name: Login to registry
         uses: docker/login-action@v2
