@@ -25,10 +25,13 @@ jobs:
       - name: Install linters
         run: |
           go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.59.0
+      - name: Vendor modules for linter
+        run: |
+          go mod vendor
       - name: Run tests
         run: go test ./...
       - name: Run linter
         run: |
-          export GOFLAGS=-mod=mod
+          export GOFLAGS=-mod=vendor
           golangci-lint run ./...
 
