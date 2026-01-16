@@ -7,6 +7,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      GOPROXY: https://goproxy.cn,direct
     steps:
       - uses: actions/checkout@v4
       - name: Set up Node.js
