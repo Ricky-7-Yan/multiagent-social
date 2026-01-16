@@ -31,7 +31,8 @@ CREATE TABLE IF NOT EXISTS embeddings (
   id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   conversation_id uuid REFERENCES conversations(id),
   message_id uuid REFERENCES messages(id),
-  vector vector(1536),
+  -- use double precision array in CI environments where pgvector extension may not be available
+  vector double precision[],
   created_at timestamptz DEFAULT now()
 );
 
