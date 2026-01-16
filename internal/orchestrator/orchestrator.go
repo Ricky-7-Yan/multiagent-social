@@ -169,8 +169,9 @@ func (o *Orchestrator) StartDebate(ctx context.Context, conversationID string, p
 			})
 			// save embedding
 			go func(mid, content string) {
-				vec := embeddings.GenerateEmbedding(content, 64)
-				_ = embeddings.SaveEmbedding(context.Background(), o.store, conversationID, mid, vec)
+				if vec, err := embeddings.GenerateEmbedding(context.Background(), content); err == nil {
+					_ = embeddings.SaveEmbedding(context.Background(), o.store, conversationID, mid, vec)
+				}
 			}(msgID, payload)
 			time.Sleep(o.responseDelay)
 		}

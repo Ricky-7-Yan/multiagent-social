@@ -12,7 +12,6 @@ import (
 	"nhooyr.io/websocket"
 	"nhooyr.io/websocket/wsjson"
 
-	"github.com/redis/go-redis/v9"
 	"github.com/yourname/multiagent-social/internal/orchestrator"
 	"github.com/yourname/multiagent-social/internal/persistence"
 	"github.com/yourname/multiagent-social/internal/pubsub"

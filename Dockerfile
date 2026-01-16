@@ -4,7 +4,7 @@ COPY go.mod go.sum ./
 RUN go env -w GOPROXY=https://proxy.golang.org,direct
 RUN go mod download
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /bin/multiagent ./cmd/devserver
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /bin/multiagent ./cmd/server
 
 # build frontend static assets into web/admin (optional - CI will run frontend build before docker build)
 RUN if [ -d "web/react-app" ]; then \
