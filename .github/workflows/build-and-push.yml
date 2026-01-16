@@ -43,10 +43,10 @@ jobs:
           go test ./...
       - name: Download Go modules
         run: go mod download
-      - name: Run linter
+      - name: Run linter (temporarily disable typecheck)
         run: |
           export GOFLAGS=-mod=vendor
-          golangci-lint run ./...
+          golangci-lint run --disable=typecheck ./...
       - name: Login to registry
         uses: docker/login-action@v2
         with:

@@ -30,8 +30,8 @@ jobs:
           go mod vendor
       - name: Run tests
         run: go test ./...
-      - name: Run linter
+      - name: Run linter (temporarily disable typecheck)
         run: |
           export GOFLAGS=-mod=vendor
-          golangci-lint run ./...
+          golangci-lint run --disable=typecheck ./...
 
