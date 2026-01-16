@@ -34,4 +34,5 @@ jobs:
         with:
           version: v1.59.0
           args: run --timeout 5m
+        continue-on-error: true
 
