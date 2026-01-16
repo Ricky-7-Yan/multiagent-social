@@ -22,14 +22,14 @@ jobs:
           go env -w GOPROXY=https://goproxy.cn,direct
           go mod tidy
           go mod download
-      - name: Install linters
-        run: |
-          go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.59.0
       - name: Vendor modules for linter
         run: |
           go mod vendor
       - name: Run tests
         run: go test ./...
-      - name: Skip linter in CI (temporary)
-        run: echo "Skipping golangci-lint in CI until typecheck/vendoring issues are resolved"
+      - name: Run golangci-lint (action)
+        uses: golangci/golangci-lint-action@v4
+        with:
+          version: v1.59.0
+          args: run --timeout 5m
 
