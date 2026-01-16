@@ -30,5 +30,7 @@ jobs:
         run: |
           export PG_DSN="postgres://postgres:password@localhost:5432/multiagent?sslmode=disable"
           psql "$PG_DSN" -f migrations/001_init.sql
+      - name: Make e2e script executable
+        run: chmod +x ./scripts/e2e.sh
       - name: Run e2e script
         run: ./scripts/e2e.sh
