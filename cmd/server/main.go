@@ -10,8 +10,6 @@ import (
 	"os/signal"
 	"time"
 
-	"github.com/go-chi/chi/v5"
-
 	"github.com/yourname/multiagent-social/internal/orchestrator"
 	"github.com/yourname/multiagent-social/internal/persistence"
 	"github.com/yourname/multiagent-social/internal/pubsub"
@@ -52,28 +50,28 @@ func main() {
 
 	orch := orchestrator.NewOrchestrator(store, ps)
 
-	r := chi.NewRouter()
-
-	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
+	mux := http.NewServeMux()
+	// health
+	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok"))
 	})
 	// metrics
-	r.Handle("/metrics", promhttp.Handler())
+	mux.Handle("/metrics", promhttp.Handler())
 
-	api := orchestrationAPI{store: store, orchestrator: orch}
-	r.Mount("/api/v1", api.Router())
-	// websocket endpoint for conversations
-	r.Route("/ws", func(sr chi.Router) {
-		sr.Get("/conversations/{id}", ws.HandleConversationWS(orch, ps, store))
-	})
+	apiHandler := orchestrationAPI{store: store, orchestrator: orch}
+	mux.Handle("/api/v1/", http.StripPrefix("/api/v1", apiHandler.Router()))
+
+	// websocket simple path (we use path prefix and let ws handler parse id)
+	mux.HandleFunc("/ws/conversations/", ws.HandleConversationWS(orch, ps, store))
+
 	// serve admin static files
 	fs := http.FileServer(http.Dir("./web/admin"))
-	r.Handle("/admin/*", http.StripPrefix("/admin/", fs))
+	mux.Handle("/admin/", http.StripPrefix("/admin/", fs))
 
 	srv := &http.Server{
 		Addr:         addr,
-		Handler:      r,
+		Handler:      mux,
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 30 * time.Second,
 	}
