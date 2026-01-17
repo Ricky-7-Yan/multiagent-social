@@ -7,8 +7,6 @@ import (
 	"net/http"
 	"os"
 	"time"
-
-	"github.com/go-chi/chi/v5"
 	"nhooyr.io/websocket"
 	"nhooyr.io/websocket/wsjson"
 
@@ -21,7 +19,9 @@ import (
 // and subscribes to Redis pubsub for conversation events. It also replays recent history.
 func HandleConversationWS(orch *orchestrator.Orchestrator, ps *pubsub.RedisPubSub, store *persistence.PostgresStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		convID := chi.URLParam(r, "id")
+		// Expect path: /ws/conversations/{id}
+		convID := strings.TrimPrefix(r.URL.Path, "/ws/conversations/")
+		convID = strings.Trim(convID, "/")
 		if convID == "" {
 			http.Error(w, "missing conversation id", http.StatusBadRequest)
 			return
