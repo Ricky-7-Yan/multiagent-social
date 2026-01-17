@@ -43,6 +43,7 @@ func Router() http.Handler {
 		}
 		parts := strings.Split(strings.Trim(trim, "/"), "/")
 		id := parts[0]
+		_ = id
 		if len(parts) >= 2 && parts[1] == "messages" {
 			if r.Method == http.MethodPost {
 				w.WriteHeader(http.StatusAccepted)
