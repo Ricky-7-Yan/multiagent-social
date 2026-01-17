@@ -52,4 +52,25 @@ body {
 .messages { display:flex; flex-direction:column; }
 .header-title { font-size:1.2rem; font-weight:700; margin-bottom:6px; }
 .small { font-size:0.9rem; color:var(--color-deep); }
+/* Additional refined styles */
+:root{
+  --muted:#6B6F82;
+  --kpi-bg: linear-gradient(90deg, rgba(231,197,122,0.08), rgba(127,182,217,0.04));
+  --shadow-1: 0 6px 20px rgba(43,45,66,0.06);
+  --shadow-2: 0 10px 30px rgba(43,45,66,0.08);
+}
+.kpi { background: var(--kpi-bg); border-radius:14px; padding:14px; min-width:180px; }
+.kpi .label{ color:var(--muted); font-size:0.85rem; }
+.kpi .value{ font-size:1.6rem; font-weight:700; margin-top:6px; color:var(--color-deep); }
+.search { padding:8px 12px; border-radius:999px; border:1px solid rgba(43,45,66,0.06); width:340px; }
+.user-avatar{ width:36px; height:36px; border-radius:50%; background: linear-gradient(90deg,var(--color-accent),var(--color-highlight)); display:inline-block; }
+.card-ghost{ background: linear-gradient(180deg, rgba(255,255,255,0.7), rgba(246,242,234,0.7)); border-radius:12px; padding:12px; box-shadow:var(--shadow-2); }
+.btn-ghost{ background:transparent; border:1px solid rgba(43,45,66,0.06); color:var(--color-deep); padding:6px 10px; border-radius:8px; }
+.message { position:relative; padding:12px 14px; border-radius:12px; margin:8px 0; max-width:72%; line-height:1.4; box-shadow:0 4px 12px rgba(11,10,15,0.03); }
+.msg-user { background: linear-gradient(90deg, #fff, #f8f7f3); margin-left:auto; }
+.msg-agent { background: linear-gradient(90deg, rgba(127,182,217,0.12), rgba(233,143,160,0.06)); }
+.message .meta{ font-size:0.78rem; color:var(--muted); margin-top:6px; display:flex; gap:8px; align-items:center; }
+.node{ padding:10px 14px; border-radius:10px; background: linear-gradient(90deg,#fff,#fbf9f6); border:1px solid rgba(43,45,66,0.04); box-shadow:0 6px 18px rgba(43,45,66,0.04); display:inline-flex; gap:8px; align-items:center; }
+.footer{ margin-top:18px; color:var(--muted); font-size:0.85rem; text-align:center; }
+@media (max-width:1100px){ .app{ grid-template-columns: 1fr; } .rightpanel{ display:none; } .search{ width:100%; } }
 
