@@ -10,6 +10,9 @@ jobs:
     runs-on: ubuntu-latest
     env:
       KUBE_CONFIG_DATA: ${{ secrets.KUBE_CONFIG_DATA }}
+      DOCKER_REGISTRY: ${{ secrets.DOCKER_REGISTRY }}
+      DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+      DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
       - name: Set up Node.js
@@ -27,13 +30,16 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ secrets.DOCKER_REGISTRY }}/multiagent-social:${{ github.ref_name }}
+          tags: ${{ env.DOCKER_REGISTRY }}/multiagent-social:${{ github.ref_name }}
         env:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
       - name: Deploy to staging (optional)
         env:
           KUBECONFIG_CONTENT: ${{ secrets.KUBE_CONFIG_DATA }}
+          DOCKER_REGISTRY: ${{ secrets.DOCKER_REGISTRY }}
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
         run: |
           if [ -z "${KUBECONFIG_CONTENT}" ]; then
             echo "KUBE_CONFIG_DATA not set; skipping deploy."
@@ -43,9 +49,19 @@ jobs:
           export KUBECONFIG=$PWD/kubeconfig
           echo "Installing helm..."
           curl https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | bash
+          # sanitize registry
+          REGISTRY="${DOCKER_REGISTRY}"
+          REGISTRY=${REGISTRY#http://}
+          REGISTRY=${REGISTRY#https://}
+          REGISTRY=${REGISTRY%/}
+          if [ -z "${REGISTRY}" ]; then
+            REGISTRY="${DOCKER_USERNAME}"
+          fi
+          IMAGE_REPO="${REGISTRY}/multiagent-social"
+          echo "Deploying image repo: ${IMAGE_REPO}:${GITHUB_REF_NAME}"
           helm upgrade --install multiagent-staging deployments/k8s -n staging --create-namespace \
-            --set image.repository=${{ secrets.DOCKER_REGISTRY }}/multiagent-social \
-            --set image.tag=${{ github.ref_name }} \
+            --set image.repository="${IMAGE_REPO}" \
+            --set image.tag="${GITHUB_REF_NAME}" \
             --wait --timeout 120s
           echo "Waiting for deployment rollout (by label)..."
           kubectl rollout status deployment -l app=multiagent-social -n staging --timeout=120s || true
