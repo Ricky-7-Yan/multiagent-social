@@ -61,6 +61,37 @@ func (s *InMemoryStore) CreateAgent(name, persona string) string {
 	return id
 }
 
+func (s *InMemoryStore) GetAgent(id string) (agent.Agent, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	a, ok := s.agents[id]
+	return a, ok
+}
+
+func (s *InMemoryStore) UpdateAgent(id, name, persona string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	a, ok := s.agents[id]
+	if !ok {
+		return false
+	}
+	a.Name = name
+	a.Persona = persona
+	s.agents[id] = a
+	return true
+}
+
+func (s *InMemoryStore) DeleteAgent(id string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	_, ok := s.agents[id]
+	if !ok {
+		return false
+	}
+	delete(s.agents, id)
+	return true
+}
+
 func (s *InMemoryStore) CreateConversation(title string) string {
 	id := s.nextID("conv")
 	s.mu.Lock()
@@ -156,6 +187,51 @@ func main() {
 			return
 		}
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	})
+	// GET/PUT/DELETE for single agent: /api/v1/agents/{id}
+	mux.HandleFunc("/api/v1/agents/", func(w http.ResponseWriter, r *http.Request) {
+		id := strings.TrimPrefix(r.URL.Path, "/api/v1/agents/")
+		if id == "" {
+			http.Error(w, "missing id", http.StatusBadRequest)
+			return
+		}
+		switch r.Method {
+		case http.MethodGet:
+			a, ok := store.GetAgent(id)
+			if !ok {
+				http.Error(w, "not found", http.StatusNotFound)
+				return
+			}
+			out := map[string]interface{}{"id": a.ID, "name": a.Name, "persona": a.Persona, "behavior_profile": a.BehaviorProfile}
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(out)
+			return
+		case http.MethodPut:
+			var p struct {
+				Name    string `json:"name"`
+				Persona string `json:"persona"`
+			}
+			if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
+				http.Error(w, "invalid body", http.StatusBadRequest)
+				return
+			}
+			if ok := store.UpdateAgent(id, p.Name, p.Persona); !ok {
+				http.Error(w, "not found", http.StatusNotFound)
+				return
+			}
+			w.WriteHeader(http.StatusNoContent)
+			return
+		case http.MethodDelete:
+			if ok := store.DeleteAgent(id); !ok {
+				http.Error(w, "not found", http.StatusNotFound)
+				return
+			}
+			w.WriteHeader(http.StatusNoContent)
+			return
+		default:
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
 	})
 
 	mux.HandleFunc("/api/v1/conversations", func(w http.ResponseWriter, r *http.Request) {
