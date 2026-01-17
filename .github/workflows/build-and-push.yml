@@ -71,10 +71,19 @@ jobs:
           if [ -z "${REGISTRY_CLEAN}" ]; then
             REGISTRY_CLEAN="${DOCKER_USERNAME}"
           fi
-          IMAGE="${REGISTRY_CLEAN}/multiagent-social:${SHORT_SHA}"
-          echo "Building ${IMAGE}"
-          docker build -t "${IMAGE}" .
-          docker push "${IMAGE}"
+          # If REGISTRY_CLEAN already looks like "namespace/repo" or contains a host/repo,
+          # don't append "/multiagent-social" again.
+          if echo "${REGISTRY_CLEAN}" | grep -q '/'; then
+            BASE_REPO="${REGISTRY_CLEAN}"
+          else
+            BASE_REPO="${REGISTRY_CLEAN}/multiagent-social"
+          fi
+          IMAGE="${BASE_REPO}:${SHORT_SHA}"
+          # docker requires lowercase repository names
+          IMAGE_LOWER=$(echo "${IMAGE}" | tr '[:upper:]' '[:lower:]')
+          echo "Building ${IMAGE_LOWER}"
+          docker build -t "${IMAGE_LOWER}" .
+          docker push "${IMAGE_LOWER}"
       - name: Skip build/push when registry secrets missing
         if: ${{ env.DOCKER_REGISTRY == '' || env.DOCKER_USERNAME == '' || env.DOCKER_PASSWORD == '' }}
         run: |
