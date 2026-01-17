@@ -61,8 +61,10 @@ jobs:
       - name: Build and push
         if: ${{ env.DOCKER_REGISTRY != '' && env.DOCKER_USERNAME != '' && env.DOCKER_PASSWORD != '' }}
         run: |
-          docker build -t ${{ env.DOCKER_REGISTRY }}/multiagent-social:${GITHUB_SHA::8} .
-          docker push ${{ env.DOCKER_REGISTRY }}/multiagent-social:${GITHUB_SHA::8}
+          SHORT_SHA=${GITHUB_SHA:0:8}
+          echo "Building ${DOCKER_REGISTRY}/multiagent-social:${SHORT_SHA}"
+          docker build -t "${DOCKER_REGISTRY}/multiagent-social:${SHORT_SHA}" .
+          docker push "${DOCKER_REGISTRY}/multiagent-social:${SHORT_SHA}"
       - name: Skip build/push when registry secrets missing
         if: ${{ env.DOCKER_REGISTRY == '' || env.DOCKER_USERNAME == '' || env.DOCKER_PASSWORD == '' }}
         run: |
