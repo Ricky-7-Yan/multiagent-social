@@ -1,9 +1,13 @@
 run:
   timeout: 5m
 linters:
+  disable-all: true
+  enable:
+    - gofmt
+    - revive
+    - gosec
   disable:
     - misspell
-    - typecheck
 issues:
   exclude-use-default: false
   max-issues-per-linter: 0
