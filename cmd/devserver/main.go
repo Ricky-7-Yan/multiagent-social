@@ -84,6 +84,31 @@ func (s *InMemoryStore) GetConversationMessages(convID string) []string {
 	return cpy
 }
 
+// SSE subscribers for devserver (conversation events)
+var (
+	subsMu      sync.Mutex
+	subscribers = map[string][]chan string{}
+)
+
+func subscribeEvents(convID string) <-chan string {
+	ch := make(chan string, 8)
+	subsMu.Lock()
+	subscribers[convID] = append(subscribers[convID], ch)
+	subsMu.Unlock()
+	return ch
+}
+
+func publishEvent(convID string, msg string) {
+	subsMu.Lock()
+	defer subsMu.Unlock()
+	for _, ch := range subscribers[convID] {
+		select {
+		case ch <- msg:
+		default:
+		}
+	}
+}
+
 func main() {
 	store := NewInMemoryStore()
 	// seed one agent
@@ -177,6 +202,8 @@ func main() {
 				return
 			}
 			store.InsertMessage(convID, "user", content)
+			// publish SSE event for subscribers
+			publishEvent(convID, fmt.Sprintf(`{"sender":"user","content":%q}`, content))
 			// simple dev orchestrator: pick up to 2 agents and reply
 			agents := store.ListAgents()
 			limit := 2
@@ -194,6 +221,8 @@ func main() {
 					continue
 				}
 				store.InsertMessage(convID, a.Name, act.Payload)
+				// publish SSE event for agent reply
+				publishEvent(convID, fmt.Sprintf(`{"sender":%q,"content":%q}`, a.Name, act.Payload))
 			}
 			w.WriteHeader(http.StatusAccepted)
 			return
@@ -209,6 +238,35 @@ func main() {
 	// serve admin static files from web/admin
 	adminDir := filepath.Join("web", "admin")
 	mux.Handle("/admin/", http.StripPrefix("/admin/", http.FileServer(http.Dir(adminDir))))
+
+	// SSE endpoint for conversation events (dev)
+	mux.HandleFunc("/events/conversations/", func(w http.ResponseWriter, r *http.Request) {
+		// expecting /events/conversations/{id}
+		id := strings.TrimPrefix(r.URL.Path, "/events/conversations/")
+		if id == "" {
+			http.Error(w, "missing id", http.StatusBadRequest)
+			return
+		}
+		flusher, ok := w.(http.Flusher)
+		if !ok {
+			http.Error(w, "streaming unsupported", http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.Header().Set("Cache-Control", "no-cache")
+		w.WriteHeader(http.StatusOK)
+		ch := subscribeEvents(id)
+		notify := r.Context().Done()
+		for {
+			select {
+			case <-notify:
+				return
+			case m := <-ch:
+				_, _ = fmt.Fprintf(w, "data: %s\n\n", m)
+				flusher.Flush()
+			}
+		}
+	})
 
 	// wrap with simple CORS middleware
 	handler := allowCORS(mux)

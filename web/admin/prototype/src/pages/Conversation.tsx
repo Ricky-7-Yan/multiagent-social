@@ -14,18 +14,28 @@ export default function Conversation(){
       .catch(()=> setMessages(['Alice: sample message','Bob: sample reply']))
 
     // try to open websocket
+    // prefer EventSource (SSE) for devserver events, fallback to WebSocket then mock
     try {
-      const ws = new WebSocket(`ws://${location.host}/ws/conversations/${encodeURIComponent(convId)}`)
-      ws.onmessage = (ev)=> {
-        try { const data = JSON.parse(ev.data); setMessages(m=> [...m, data.content||ev.data]) } catch(e){ setMessages(m=> [...m, ev.data])}
+      const es = new EventSource(`/events/conversations/${encodeURIComponent(convId)}`)
+      es.onmessage = (ev) => {
+        try { const data = JSON.parse(ev.data); setMessages(m=> [...m, (data.sender ? data.sender+': '+data.content : ev.data)]) } catch(e){ setMessages(m=> [...m, ev.data])}
       }
-      ws.onopen = ()=> console.log('ws open')
-      wsRef.current = ws
-      return ()=> { ws.close() }
+      es.onerror = () => { es.close() }
+      return ()=> { es.close() }
     } catch (e) {
-      // fallback: mock real-time by interval
-      const id = setInterval(()=> setMessages(m => [...m, 'Mock agent ping: ' + new Date().toLocaleTimeString()]), 5000)
-      return ()=> clearInterval(id)
+      try {
+        const ws = new WebSocket(`ws://${location.host}/ws/conversations/${encodeURIComponent(convId)}`)
+        ws.onmessage = (ev)=> {
+          try { const data = JSON.parse(ev.data); setMessages(m=> [...m, data.content||ev.data]) } catch(e){ setMessages(m=> [...m, ev.data])}
+        }
+        ws.onopen = ()=> console.log('ws open')
+        wsRef.current = ws
+        return ()=> { ws.close() }
+      } catch (e2) {
+        // fallback: mock real-time by interval
+        const id = setInterval(()=> setMessages(m => [...m, 'Mock agent ping: ' + new Date().toLocaleTimeString()]), 5000)
+        return ()=> clearInterval(id)
+      }
     }
   }, [convId])
 
