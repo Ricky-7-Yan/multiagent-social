@@ -44,3 +44,47 @@ func (r *RedisPubSub) Client() *redis.Client {
 	return r.client
 }
 
+// ------- adapter to provide simple string-channel Subscriber for ws package -------
+type redisSubscriberAdapter struct {
+	pubsub *redis.PubSub
+	ch     chan string
+	done   chan struct{}
+}
+
+func (a *redisSubscriberAdapter) Channel() <-chan string {
+	return a.ch
+}
+
+func (a *redisSubscriberAdapter) Close() error {
+	close(a.done)
+	_ = a.pubsub.Close()
+	close(a.ch)
+	return nil
+}
+
+// SubscribeAdapter returns a Subscriber that yields string payloads for the given channel.
+func (r *RedisPubSub) SubscribeAdapter(ctx context.Context, channel string) (interface{ Channel() <-chan string; Close() error }, error) {
+	ps := r.client.Subscribe(ctx, channel)
+	// create adapter
+	adapter := &redisSubscriberAdapter{
+		pubsub: ps,
+		ch:     make(chan string, 16),
+		done:   make(chan struct{}),
+	}
+	// forward messages
+	go func() {
+		ch := ps.Channel()
+		for {
+			select {
+			case <-adapter.done:
+				return
+			case msg, ok := <-ch:
+				if !ok {
+					return
+				}
+				adapter.ch <- msg.Payload
+			}
+		}
+	}()
+	return adapter, nil
+}
