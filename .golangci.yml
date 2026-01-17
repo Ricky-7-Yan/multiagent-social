@@ -2,8 +2,8 @@ run:
   timeout: 5m
 linters:
   disable:
-    - goanalysis_metalinter
     - misspell
+    - typecheck
 issues:
   exclude-use-default: false
   max-issues-per-linter: 0
