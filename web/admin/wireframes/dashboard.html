@@ -1,0 +1,65 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <title>Wireframe - Dashboard</title>
+    <link rel="stylesheet" href="./style.css"/>
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="logo">MultiAgent</div>
+        <ul class="nav">
+          <li>Dashboard</li>
+          <li>Conversations</li>
+          <li>Agents</li>
+          <li>Workflow Editor</li>
+          <li>Monitoring</li>
+          <li>Billing</li>
+          <li>Settings</li>
+        </ul>
+      </aside>
+      <main class="main">
+        <div class="topbar">
+          <div>
+            <div class="header-title">Dashboard</div>
+            <div class="muted">Overview of your multi-agent system</div>
+          </div>
+          <div>
+            <button class="btn">New Conversation</button>
+            <button class="btn">New Agent</button>
+          </div>
+        </div>
+        <div class="kpis">
+          <div class="kpi card"><strong>Active Agents</strong><div class="small">12</div></div>
+          <div class="kpi card"><strong>Conversations</strong><div class="small">24 (today)</div></div>
+          <div class="kpi card"><strong>Token Usage</strong><div class="small">34k / month</div></div>
+          <div class="kpi card"><strong>Avg Latency</strong><div class="small">320 ms</div></div>
+        </div>
+        <div class="canvas card">
+          <h3>Recent Activity</h3>
+          <div class="muted">Timeline of events and quick insights</div>
+          <div style="margin-top:12px;">
+            <div class="card">Agent Alice executed workflow X — <span class="muted">2m ago</span></div>
+            <div class="card">New conversation started: conv-123 — <span class="muted">10m ago</span></div>
+          </div>
+        </div>
+      </main>
+      <aside class="rightpanel">
+        <div class="card">
+          <div class="header-title">Agents</div>
+          <ul class="agents-list">
+            <li>agent-1 — Alice <span class="muted">online</span></li>
+            <li>agent-2 — Bob <span class="muted">idle</span></li>
+          </ul>
+        </div>
+        <div class="card">
+          <div class="header-title">Quick Logs</div>
+          <div class="muted">Latest traces and errors</div>
+        </div>
+      </aside>
+    </div>
+  </body>
+</html>
+

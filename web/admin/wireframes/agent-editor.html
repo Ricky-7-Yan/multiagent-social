@@ -1,0 +1,75 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <title>Wireframe - Agent Editor</title>
+    <link rel="stylesheet" href="./style.css"/>
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="logo">MultiAgent</div>
+        <ul class="nav">
+          <li>Dashboard</li>
+          <li>Conversations</li>
+          <li class="active">Agents</li>
+        </ul>
+      </aside>
+      <main class="main">
+        <div class="topbar">
+          <div>
+            <div class="header-title">Agent Editor — Alice</div>
+            <div class="muted">Model: gpt-3.5 / Temperature: 0.7</div>
+          </div>
+          <div>
+            <button class="btn">Save</button>
+            <button class="btn">Run Simulation</button>
+          </div>
+        </div>
+        <div class="canvas card">
+          <div style="display:flex; gap:12px;">
+            <div style="flex:1;">
+              <div class="card">
+                <div class="header-title">Flow Canvas (mock)</div>
+                <div class="muted">Drag nodes to build behavior flow</div>
+                <div style="height:300px; border-radius:8px; background:linear-gradient(90deg, rgba(231,197,122,0.04), rgba(127,182,217,0.03)); margin-top:8px; padding:8px;">
+                  <div style="display:flex; gap:8px;">
+                    <div style="background:white; padding:8px; border-radius:8px;">Input</div>
+                    <div style="background:var(--color-accent); color:white; padding:8px; border-radius:8px;">LLM</div>
+                    <div style="background:var(--color-highlight); color:white; padding:8px; border-radius:8px;">Tool</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div style="width:360px;">
+              <div class="card">
+                <div class="header-title">Properties</div>
+                <div class="small">Name</div>
+                <input value="Alice" />
+                <div class="small">Persona</div>
+                <textarea rows="4">music, literature</textarea>
+                <div class="small">Model</div>
+                <select><option>gpt-3.5</option><option>gpt-4</option></select>
+                <div class="small" style="margin-top:8px;">Behavior Profile (JSON)</div>
+                <textarea rows="6">{ "tone": "friendly", "max_tokens": 512 }</textarea>
+              </div>
+              <div class="card">
+                <div class="header-title">Recent Runs</div>
+                <div class="muted">No recent runs</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+      <aside class="rightpanel">
+        <div class="card">
+          <div class="header-title">Agent Performance</div>
+          <div class="muted">Avg latency: 210ms</div>
+          <div class="muted">Success rate: 98%</div>
+        </div>
+      </aside>
+    </div>
+  </body>
+</html>
+
