@@ -62,9 +62,19 @@ jobs:
         if: ${{ env.DOCKER_REGISTRY != '' && env.DOCKER_USERNAME != '' && env.DOCKER_PASSWORD != '' }}
         run: |
           SHORT_SHA=${GITHUB_SHA:0:8}
-          echo "Building ${DOCKER_REGISTRY}/multiagent-social:${SHORT_SHA}"
-          docker build -t "${DOCKER_REGISTRY}/multiagent-social:${SHORT_SHA}" .
-          docker push "${DOCKER_REGISTRY}/multiagent-social:${SHORT_SHA}"
+          # sanitize registry: strip protocol and trailing slash
+          REGISTRY_CLEAN="${DOCKER_REGISTRY}"
+          REGISTRY_CLEAN=${REGISTRY_CLEAN#http://}
+          REGISTRY_CLEAN=${REGISTRY_CLEAN#https://}
+          REGISTRY_CLEAN=${REGISTRY_CLEAN%/}
+          # fallback to username if registry empty after sanitize
+          if [ -z "${REGISTRY_CLEAN}" ]; then
+            REGISTRY_CLEAN="${DOCKER_USERNAME}"
+          fi
+          IMAGE="${REGISTRY_CLEAN}/multiagent-social:${SHORT_SHA}"
+          echo "Building ${IMAGE}"
+          docker build -t "${IMAGE}" .
+          docker push "${IMAGE}"
       - name: Skip build/push when registry secrets missing
         if: ${{ env.DOCKER_REGISTRY == '' || env.DOCKER_USERNAME == '' || env.DOCKER_PASSWORD == '' }}
         run: |
