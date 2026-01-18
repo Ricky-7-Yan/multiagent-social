@@ -6,7 +6,6 @@ import (
 	"os"
 
 	openai "github.com/sashabaranov/go-openai"
-	"github.com/pgvector/pgvector-go"
 
 	"github.com/yourname/multiagent-social/internal/persistence"
 )
@@ -43,8 +42,13 @@ func SaveEmbedding(ctx context.Context, store *persistence.PostgresStore, conver
 	if store == nil {
 		return errors.New("nil store")
 	}
-	pgvec := pgvector.NewVector(v)
-	_, err := store.Pool().Exec(ctx, "INSERT INTO embeddings (conversation_id, message_id, vector) VALUES ($1, $2, $3)", conversationID, messageID, pgvec)
+	// store vector as native float64 array to avoid depending on pgvector types here
+	// convert []float32 -> []float64 for database driver
+	vec := make([]float64, len(v))
+	for i, f := range v {
+		vec[i] = float64(f)
+	}
+	_, err := store.Pool().Exec(ctx, "INSERT INTO embeddings (conversation_id, message_id, vector) VALUES ($1, $2, $3)", conversationID, messageID, vec)
 	return err
 }
 
@@ -53,9 +57,13 @@ func QuerySimilarMessages(ctx context.Context, store *persistence.PostgresStore,
 	if store == nil {
 		return nil, errors.New("nil store")
 	}
-	pgvec := pgvector.NewVector(vector)
-	// use pgvector '<->' distance operator (lower = more similar)
-	rows, err := store.Pool().Query(ctx, "SELECT message_id FROM embeddings ORDER BY vector <-> $1 LIMIT $2", pgvec, k)
+	// convert to []float64 for query parameter
+	vec := make([]float64, len(vector))
+	for i, f := range vector {
+		vec[i] = float64(f)
+	}
+	// use pgvector '<->' distance operator if column is pgvector, otherwise works with double precision[]
+	rows, err := store.Pool().Query(ctx, "SELECT message_id FROM embeddings ORDER BY vector <-> $1 LIMIT $2", vec, k)
 	if err != nil {
 		return nil, err
 	}
