@@ -35,7 +35,8 @@ func GenerateToken(subject string, role string, ttl time.Duration) (string, erro
 }
 
 // parseAndValidate parses token string and returns claims if valid.
-func parseAndValidate(tokenStr string) (jwt.MapClaims, error) {
+// Returns a generic map to avoid exposing jwt types in public signatures.
+func parseAndValidate(tokenStr string) (map[string]interface{}, error) {
 	secret := os.Getenv("AUTH_JWT_SECRET")
 	if secret == "" {
 		secret = "dev-secret"
@@ -51,7 +52,12 @@ func parseAndValidate(tokenStr string) (jwt.MapClaims, error) {
 		return nil, err
 	}
 	if claims, ok := tok.Claims.(jwt.MapClaims); ok && tok.Valid {
-		return claims, nil
+		// convert jwt.MapClaims to map[string]interface{}
+		out := make(map[string]interface{}, len(claims))
+		for k, v := range claims {
+			out[k] = v
+		}
+		return out, nil
 	}
 	return nil, jwt.ErrTokenInvalidClaims
 }
@@ -86,13 +92,21 @@ func RequireAdmin(next http.Handler) http.Handler {
 }
 
 // ExtractPrincipal returns token claims from request context if present.
-func ExtractPrincipal(r *http.Request) (jwt.MapClaims, bool) {
+func ExtractPrincipal(r *http.Request) (map[string]interface{}, bool) {
 	v := r.Context().Value(ContextPrincipal)
 	if v == nil {
 		return nil, false
 	}
-	if m, ok := v.(jwt.MapClaims); ok {
+	if m, ok := v.(map[string]interface{}); ok {
 		return m, true
+	}
+	// fallback: if stored as jwt.MapClaims convert
+	if m, ok := v.(jwt.MapClaims); ok {
+		out := make(map[string]interface{}, len(m))
+		for k, vv := range m {
+			out[k] = vv
+		}
+		return out, true
 	}
 	return nil, false
 }
