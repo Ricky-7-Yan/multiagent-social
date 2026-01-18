@@ -16,6 +16,7 @@ import (
 	api "github.com/yourname/multiagent-social/internal/api"
 	"github.com/yourname/multiagent-social/internal/ws"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"strings"
 )
 
 func main() {
@@ -97,15 +98,61 @@ type orchestrationAPI struct {
 }
 
 func (a orchestrationAPI) Router() http.Handler {
-	r := chi.NewRouter()
-	r.Get("/agents", a.listAgents)
-	// protect agent creation with admin JWT
-	r.With(api.RequireAdmin).Post("/agents", a.createAgent)
-	r.Post("/conversations", a.createConversation)
-	r.Post("/conversations/{id}/messages", a.postMessage)
-	r.Post("/conversations/{id}/debate", a.startDebate)
-	r.Get("/conversations", a.listConversations)
-	return r
+	mux := http.NewServeMux()
+	mux.HandleFunc("/agents", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			a.listAgents(w, r)
+			return
+		}
+		if r.Method == http.MethodPost {
+			// require admin
+			api.RequireAdmin(http.HandlerFunc(a.createAgent)).ServeHTTP(w, r)
+			return
+		}
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	})
+
+	mux.HandleFunc("/conversations", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			a.listConversations(w, r)
+			return
+		}
+		if r.Method == http.MethodPost {
+			a.createConversation(w, r)
+			return
+		}
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	})
+
+	// nested conv routes: /conversations/{id}/...
+	mux.HandleFunc("/conversations/", func(w http.ResponseWriter, r *http.Request) {
+		trim := strings.TrimPrefix(r.URL.Path, "/conversations/")
+		trim = strings.Trim(trim, "/")
+		parts := strings.Split(trim, "/")
+		if len(parts) == 0 || parts[0] == "" {
+			http.Error(w, "not found", http.StatusNotFound)
+			return
+		}
+		id := parts[0]
+		if len(parts) >= 2 && parts[1] == "messages" {
+			if r.Method == http.MethodPost {
+				// attach id to URL for handler compatibility
+				r = r.WithContext(context.WithValue(r.Context(), "convID", id))
+				a.postMessage(w, r)
+				return
+			}
+		}
+		if len(parts) >= 2 && parts[1] == "debate" {
+			if r.Method == http.MethodPost {
+				r = r.WithContext(context.WithValue(r.Context(), "convID", id))
+				a.startDebate(w, r)
+				return
+			}
+		}
+		http.Error(w, "not found", http.StatusNotFound)
+	})
+
+	return mux
 }
 
 func (a orchestrationAPI) listAgents(w http.ResponseWriter, r *http.Request) {
@@ -162,7 +209,8 @@ func (a orchestrationAPI) listConversations(w http.ResponseWriter, r *http.Reque
 }
 
 func (a orchestrationAPI) postMessage(w http.ResponseWriter, r *http.Request) {
-	convID := chi.URLParam(r, "id")
+	// convID may be provided in context by the Router helper
+	convID, _ := r.Context().Value("convID").(string)
 	if convID == "" {
 		http.Error(w, "missing conversation id", http.StatusBadRequest)
 		return
@@ -180,7 +228,7 @@ func (a orchestrationAPI) postMessage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a orchestrationAPI) startDebate(w http.ResponseWriter, r *http.Request) {
-	convID := chi.URLParam(r, "id")
+	convID, _ := r.Context().Value("convID").(string)
 	if convID == "" {
 		http.Error(w, "missing conversation id", http.StatusBadRequest)
 		return
